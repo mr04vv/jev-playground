@@ -18,7 +18,7 @@ window.addEventListener("message", async (event) => {
   post(
     res.error
       ? { type: "error", id: msg.id, message: res.error }
-      : { type: "result", id: msg.id, text: msg.text, color: res.color },
+      : { type: "result", id: msg.id, text: msg.text, label: res.label, color: res.color },
   );
 });
 

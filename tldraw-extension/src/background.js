@@ -1,10 +1,8 @@
 import { colorFor } from "./colors.js";
 import { categorize, OTHER } from "./jev.js";
-import { layoutGroups } from "./layout.js";
 import { mapWithConcurrency } from "./pool.js";
 
 const CONCURRENCY = 5;
-const MOVE_ANIMATION_MS = 600;
 
 const setStatus = (status) => chrome.storage.session.set({ status });
 
@@ -24,15 +22,11 @@ const readNotes = () => {
   };
 };
 
-// Runs in the page's MAIN world, so it must be self-contained.
-// One history stopping point makes the whole animated move undoable at once.
-const applyPositions = (positions, durationMs) => {
-  const editor = window.editor;
-  editor.markHistoryStoppingPoint("jev-group-notes");
-  editor.animateShapes(
-    positions.map((p) => ({ id: p.id, type: "note", x: p.x, y: p.y })),
-    { animation: { duration: durationMs } },
-  );
+// Runs in the page's MAIN world; delegates to the board API that live-page.js exposes.
+const applyAssignments = (assignments, origin) => {
+  if (!window.__jevBoard) return { error: "拡張機能を更新したあとは tldraw.com のタブを再読み込みしてください。" };
+  window.__jevBoard.assign(assignments, origin);
+  return {};
 };
 
 const inPage = async (tabId, func, args = []) => {
@@ -59,11 +53,17 @@ const groupNotes = async (tabId) => {
   });
 
   const order = [...categories.filter((c) => c !== OTHER), OTHER];
-  const groups = order.map((c) => notes.filter((_, i) => labels[i] === c).map((n) => n.id));
-  const sizes = Object.fromEntries(notes.map((n) => [n.id, n]));
+  const assignments = order.flatMap((label) =>
+    notes
+      .map((note, i) => ({ note, label: labels[i] }))
+      .filter((a) => a.label === label)
+      .sort((a, b) => a.note.y - b.note.y)
+      .map((a) => ({ id: a.note.id, label, color: colorFor(label, categories) })),
+  );
   const origin = { x: Math.min(...notes.map((n) => n.x)), y: Math.min(...notes.map((n) => n.y)) };
-  await inPage(tabId, applyPositions, [layoutGroups(groups, sizes, origin), MOVE_ANIMATION_MS]);
-  return order.map((c, i) => `${c}: ${groups[i].length}`).join(" / ");
+  const applied = await inPage(tabId, applyAssignments, [assignments, origin]);
+  if (applied.error) throw new Error(applied.error);
+  return order.map((c) => `${c}: ${assignments.filter((a) => a.label === c).length}`).join(" / ");
 };
 
 const categorizeLive = async (text) => {
