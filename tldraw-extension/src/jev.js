@@ -1,25 +1,23 @@
 export const API_URL = "https://api.typesafe.ai/v1/systemone";
 export const MODEL = "jev-latest";
-export const QUESTION_KEY = "same_topic";
+export const QUESTION_KEY = "category";
+export const OTHER = "その他";
 
 const MAX_RETRIES = 3;
 const DEFAULT_RETRY_MS = 1000;
 
-const QUESTION = {
-  type: "noul",
-  instructions:
-    "Are sticky notes note_a and note_b about the same topic, so they belong in the same group on a whiteboard?",
-  criteria: {
-    true: "Both notes discuss the same subject, problem, or theme.",
-    false: "The notes discuss different subjects.",
-  },
-};
+const INSTRUCTIONS = "Which category does this sticky note on a whiteboard belong to?";
+const OTHER_DESCRIPTION = "The note does not clearly fit any of the other categories.";
 
-export const buildPairRequest = (a, b) => ({
-  model: MODEL,
-  state: { note_a: a, note_b: b },
-  questions: { [QUESTION_KEY]: QUESTION },
-});
+export const buildCategoryRequest = (text, categories) => {
+  const criteria = Object.fromEntries(categories.map((c) => [c, null]));
+  criteria[OTHER] ??= OTHER_DESCRIPTION;
+  return {
+    model: MODEL,
+    state: text,
+    questions: { [QUESTION_KEY]: { type: "choice", instructions: INSTRUCTIONS, criteria } },
+  };
+};
 
 const retryDelayMs = (headers) => {
   const ms = Number(headers.get("retry-after-ms"));
@@ -28,7 +26,7 @@ const retryDelayMs = (headers) => {
   return headers.has("retry-after") && Number.isFinite(seconds) ? seconds * 1000 : DEFAULT_RETRY_MS;
 };
 
-export const sameTopicProbability = async (a, b, { apiKey, fetch = globalThis.fetch }) => {
+export const categorize = async (text, categories, { apiKey, fetch = globalThis.fetch }) => {
   for (let attempt = 0; ; attempt++) {
     const res = await fetch(API_URL, {
       method: "POST",
@@ -37,7 +35,7 @@ export const sameTopicProbability = async (a, b, { apiKey, fetch = globalThis.fe
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify(buildPairRequest(a, b)),
+      body: JSON.stringify(buildCategoryRequest(text, categories)),
     });
     if (res.status === 429 && attempt < MAX_RETRIES) {
       await new Promise((r) => setTimeout(r, retryDelayMs(res.headers)));
@@ -48,10 +46,10 @@ export const sameTopicProbability = async (a, b, { apiKey, fetch = globalThis.fe
       throw new Error(`Jev API ${res.status} (request ${requestId}): ${await res.text()}`);
     }
     const body = await res.json();
-    const probability = body?.answers?.[QUESTION_KEY]?.noul;
-    if (typeof probability !== "number") {
+    const choice = body?.answers?.[QUESTION_KEY]?.choice;
+    if (typeof choice !== "string") {
       throw new Error(`Unexpected response shape: ${JSON.stringify(body)}`);
     }
-    return probability;
+    return choice;
   }
 };

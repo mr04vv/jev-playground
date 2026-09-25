@@ -1,12 +1,11 @@
 export const GAP = 40;
 
-// Place each group in its own column, largest group first, starting at origin.
+// Place each non-empty group in its own column, in the given order, starting at origin.
 // Columns are separated by twice the gap so groups read as distinct clusters.
 export const layoutGroups = (groups, sizes, origin) => {
-  const ordered = [...groups].sort((g, h) => h.length - g.length);
   const positions = [];
   let x = origin.x;
-  for (const group of ordered) {
+  for (const group of groups.filter((g) => g.length > 0)) {
     let y = origin.y;
     for (const id of group) {
       positions.push({ id, x, y });

@@ -1,10 +1,8 @@
-import { averageLinkage, DEFAULT_THRESHOLD } from "./cluster.js";
-import { sameTopicProbability } from "./jev.js";
+import { categorize, OTHER } from "./jev.js";
 import { layoutGroups } from "./layout.js";
 import { mapWithConcurrency } from "./pool.js";
 
 const CONCURRENCY = 5;
-const MAX_NOTES = 60;
 
 const setStatus = (status) => chrome.storage.session.set({ status });
 
@@ -37,42 +35,35 @@ const inPage = async (tabId, func, args = []) => {
 };
 
 const groupNotes = async (tabId) => {
-  const { apiKey, threshold } = await chrome.storage.local.get(["apiKey", "threshold"]);
+  const { apiKey, categories = [] } = await chrome.storage.local.get(["apiKey", "categories"]);
   if (!apiKey) throw new Error("API キーが未設定です。");
+  if (categories.length === 0) throw new Error("分類を 1 つ以上入力してください。");
 
   const read = await inPage(tabId, readNotes);
   if (read.error) throw new Error(read.error);
   const notes = read.notes.filter((n) => n.text);
-  if (notes.length < 2) throw new Error("文字の入った付箋が 2 枚以上必要です。");
-  if (notes.length > MAX_NOTES) throw new Error(`付箋が多すぎます（${notes.length} 枚、上限 ${MAX_NOTES} 枚）。選択して絞ってください。`);
-
-  const pairs = [];
-  for (let i = 0; i < notes.length; i++) for (let j = i + 1; j < notes.length; j++) pairs.push([i, j]);
+  if (notes.length === 0) throw new Error("文字の入った付箋が見つかりません。");
 
   let done = 0;
-  await setStatus({ state: "running", done, total: pairs.length });
-  const scores = await mapWithConcurrency(pairs, CONCURRENCY, async ([i, j]) => {
-    const p = await sameTopicProbability(notes[i].text, notes[j].text, { apiKey });
-    await setStatus({ state: "running", done: ++done, total: pairs.length });
-    return p;
+  await setStatus({ state: "running", done, total: notes.length });
+  const labels = await mapWithConcurrency(notes, CONCURRENCY, async (note) => {
+    const label = await categorize(note.text, categories, { apiKey });
+    await setStatus({ state: "running", done: ++done, total: notes.length });
+    return label;
   });
 
-  const sim = notes.map((_, i) => notes.map((_, j) => (i === j ? 1 : 0)));
-  pairs.forEach(([i, j], k) => {
-    sim[i][j] = sim[j][i] = scores[k];
-  });
-
-  const groups = averageLinkage(sim, threshold ?? DEFAULT_THRESHOLD).map((g) => g.map((i) => notes[i].id));
+  const order = [...categories.filter((c) => c !== OTHER), OTHER];
+  const groups = order.map((c) => notes.filter((_, i) => labels[i] === c).map((n) => n.id));
   const sizes = Object.fromEntries(notes.map((n) => [n.id, n]));
   const origin = { x: Math.min(...notes.map((n) => n.x)), y: Math.min(...notes.map((n) => n.y)) };
   await inPage(tabId, applyPositions, [layoutGroups(groups, sizes, origin)]);
-  return groups.length;
+  return order.map((c, i) => `${c}: ${groups[i].length}`).join(" / ");
 };
 
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg?.type !== "group") return false;
   groupNotes(msg.tabId).then(
-    (groupCount) => setStatus({ state: "done", groupCount }),
+    (summary) => setStatus({ state: "done", summary }),
     (err) => {
       console.error("[jev] grouping failed", err);
       return setStatus({ state: "error", message: err.message });

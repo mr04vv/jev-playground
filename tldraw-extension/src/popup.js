@@ -1,5 +1,3 @@
-import { DEFAULT_THRESHOLD } from "./cluster.js";
-
 const TLDRAW_ORIGIN = "https://www.tldraw.com/";
 const $ = (id) => document.getElementById(id);
 
@@ -7,14 +5,14 @@ const renderStatus = (status) => {
   if (!status) return;
   $("run").disabled = status.state === "running";
   $("status").textContent =
-    status.state === "running" ? `判定中… ${status.done} / ${status.total} ペア`
-    : status.state === "done" ? `${status.groupCount} グループに並べ替えました（Ctrl/⌘+Z で元に戻せます）`
+    status.state === "running" ? `判定中… ${status.done} / ${status.total} 枚`
+    : status.state === "done" ? `並べ替えました（${status.summary}）。Ctrl/⌘+Z で元に戻せます`
     : `エラー: ${status.message}`;
 };
 
-const { apiKey, threshold } = await chrome.storage.local.get(["apiKey", "threshold"]);
+const { apiKey, categories } = await chrome.storage.local.get(["apiKey", "categories"]);
 $("apiKey").value = apiKey ?? "";
-$("threshold").value = threshold ?? DEFAULT_THRESHOLD;
+$("categories").value = (categories ?? []).join("\n");
 renderStatus((await chrome.storage.session.get("status")).status);
 
 chrome.storage.onChanged.addListener((changes, area) => {
@@ -22,12 +20,8 @@ chrome.storage.onChanged.addListener((changes, area) => {
 });
 
 $("run").addEventListener("click", async () => {
-  const value = Number($("threshold").value);
-  if (!(value >= 0 && value <= 1)) {
-    $("status").textContent = "閾値は 0〜1 で指定してください";
-    return;
-  }
-  await chrome.storage.local.set({ apiKey: $("apiKey").value.trim(), threshold: value });
+  const categories = [...new Set($("categories").value.split("\n").map((c) => c.trim()).filter(Boolean))];
+  await chrome.storage.local.set({ apiKey: $("apiKey").value.trim(), categories });
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.url?.startsWith(TLDRAW_ORIGIN)) {
     $("status").textContent = "tldraw.com のタブで実行してください";
