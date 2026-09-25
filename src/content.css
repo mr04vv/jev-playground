@@ -1,0 +1,17 @@
+[data-jev="pending"] article {
+  opacity: 0.35;
+}
+
+[data-jev="hidden"] article {
+  display: none !important;
+}
+
+[data-jev="hidden"]::before {
+  content: attr(data-jev-label);
+  display: block;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: rgb(113, 118, 123);
+  border-bottom: 1px solid rgb(47, 51, 54);
+  cursor: pointer;
+}

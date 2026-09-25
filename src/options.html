@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>Jev X Engineering Filter</title>
+    <style>
+      body { font: 14px system-ui, sans-serif; width: 320px; padding: 12px; }
+      label { display: block; margin: 10px 0 4px; }
+      input[type="password"], input[type="number"] { width: 100%; box-sizing: border-box; }
+      #status { margin-top: 10px; min-height: 1em; color: #0a7; }
+    </style>
+  </head>
+  <body>
+    <label><input id="enabled" type="checkbox" /> フィルタを有効にする</label>
+    <label for="apiKey">TypeSafe API キー</label>
+    <input id="apiKey" type="password" autocomplete="off" />
+    <label for="threshold">表示する閾値（0〜1。エンジニアリング確率がこれ以上なら表示）</label>
+    <input id="threshold" type="number" min="0" max="1" step="0.05" />
+    <button id="save">保存</button>
+    <div id="status"></div>
+    <script src="options.js" type="module"></script>
+  </body>
+</html>

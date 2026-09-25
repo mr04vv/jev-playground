@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Jev X Engineering Filter",
+  "version": "0.1.0",
+  "description": "Shows only engineering-related posts on the X home timeline, judged by Jev.",
+  "permissions": ["storage"],
+  "host_permissions": ["https://api.typesafe.ai/*"],
+  "background": { "service_worker": "src/background.js", "type": "module" },
+  "content_scripts": [
+    {
+      "matches": ["https://x.com/*"],
+      "js": ["src/content.js"],
+      "css": ["src/content.css"]
+    }
+  ],
+  "action": { "default_popup": "src/options.html" },
+  "options_page": "src/options.html"
+}
