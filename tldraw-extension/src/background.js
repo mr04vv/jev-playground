@@ -4,6 +4,7 @@ import { layoutGroups } from "./layout.js";
 import { mapWithConcurrency } from "./pool.js";
 
 const CONCURRENCY = 5;
+const MOVE_ANIMATION_MS = 600;
 
 const setStatus = (status) => chrome.storage.session.set({ status });
 
@@ -23,11 +24,15 @@ const readNotes = () => {
   };
 };
 
-// Runs in the page's MAIN world; one history stopping point makes the move undoable at once.
-const applyPositions = (positions) => {
+// Runs in the page's MAIN world, so it must be self-contained.
+// One history stopping point makes the whole animated move undoable at once.
+const applyPositions = (positions, durationMs) => {
   const editor = window.editor;
   editor.markHistoryStoppingPoint("jev-group-notes");
-  editor.run(() => editor.updateShapes(positions.map((p) => ({ id: p.id, type: "note", x: p.x, y: p.y }))));
+  editor.animateShapes(
+    positions.map((p) => ({ id: p.id, type: "note", x: p.x, y: p.y })),
+    { animation: { duration: durationMs } },
+  );
 };
 
 const inPage = async (tabId, func, args = []) => {
@@ -57,7 +62,7 @@ const groupNotes = async (tabId) => {
   const groups = order.map((c) => notes.filter((_, i) => labels[i] === c).map((n) => n.id));
   const sizes = Object.fromEntries(notes.map((n) => [n.id, n]));
   const origin = { x: Math.min(...notes.map((n) => n.x)), y: Math.min(...notes.map((n) => n.y)) };
-  await inPage(tabId, applyPositions, [layoutGroups(groups, sizes, origin)]);
+  await inPage(tabId, applyPositions, [layoutGroups(groups, sizes, origin), MOVE_ANIMATION_MS]);
   return order.map((c, i) => `${c}: ${groups[i].length}`).join(" / ");
 };
 
