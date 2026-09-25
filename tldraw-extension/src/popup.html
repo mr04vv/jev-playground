@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>Jev tldraw Note Grouper</title>
+    <style>
+      body { font: 14px system-ui, sans-serif; width: 320px; padding: 12px; }
+      label { display: block; margin: 10px 0 4px; }
+      input { width: 100%; box-sizing: border-box; }
+      button { margin-top: 12px; width: 100%; padding: 8px; }
+      #status { margin-top: 10px; min-height: 1em; }
+    </style>
+  </head>
+  <body>
+    <label for="apiKey">TypeSafe API キー</label>
+    <input id="apiKey" type="password" autocomplete="off" />
+    <label for="threshold">同じグループにする閾値（0〜1。高いほど細かく分かれる）</label>
+    <input id="threshold" type="number" min="0" max="1" step="0.05" />
+    <button id="run">付箋をグループ化</button>
+    <div id="status"></div>
+    <script src="popup.js" type="module"></script>
+  </body>
+</html>

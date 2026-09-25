@@ -20,3 +20,5 @@ export const averageLinkage = (sim, threshold) => {
     groups = groups.filter((_, i) => i !== best.a && i !== best.b).concat([merged]);
   }
 };
+
+export const DEFAULT_THRESHOLD = 0.5;

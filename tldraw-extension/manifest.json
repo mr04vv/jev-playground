@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Jev tldraw Note Grouper",
+  "version": "0.1.0",
+  "description": "Groups sticky notes on tldraw.com by topic, judged by Jev.",
+  "permissions": ["scripting", "storage"],
+  "host_permissions": ["https://api.typesafe.ai/*", "https://www.tldraw.com/*"],
+  "background": { "service_worker": "src/background.js", "type": "module" },
+  "action": { "default_popup": "src/popup.html" }
+}
