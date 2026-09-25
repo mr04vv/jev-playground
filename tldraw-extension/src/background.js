@@ -1,3 +1,4 @@
+import { colorFor } from "./colors.js";
 import { categorize, OTHER } from "./jev.js";
 import { layoutGroups } from "./layout.js";
 import { mapWithConcurrency } from "./pool.js";
@@ -60,14 +61,30 @@ const groupNotes = async (tabId) => {
   return order.map((c, i) => `${c}: ${groups[i].length}`).join(" / ");
 };
 
-chrome.runtime.onMessage.addListener((msg) => {
-  if (msg?.type !== "group") return false;
-  groupNotes(msg.tabId).then(
-    (summary) => setStatus({ state: "done", summary }),
-    (err) => {
-      console.error("[jev] grouping failed", err);
-      return setStatus({ state: "error", message: err.message });
-    },
-  );
+const categorizeLive = async (text) => {
+  const { apiKey, categories = [] } = await chrome.storage.local.get(["apiKey", "categories"]);
+  if (!apiKey) throw new Error("API キーが未設定です。");
+  const label = await categorize(text, categories, { apiKey });
+  return { label, color: colorFor(label, categories) };
+};
+
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg?.type === "group") {
+    groupNotes(msg.tabId).then(
+      (summary) => setStatus({ state: "done", summary }),
+      (err) => {
+        console.error("[jev] grouping failed", err);
+        return setStatus({ state: "error", message: err.message });
+      },
+    );
+    return false;
+  }
+  if (msg?.type === "categorize") {
+    categorizeLive(msg.text).then(sendResponse, (err) => {
+      console.error("[jev] live categorize failed", err);
+      sendResponse({ error: err.message });
+    });
+    return true;
+  }
   return false;
 });

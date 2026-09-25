@@ -10,9 +10,21 @@ const renderStatus = (status) => {
     : `エラー: ${status.message}`;
 };
 
-const { apiKey, categories } = await chrome.storage.local.get(["apiKey", "categories"]);
+const { apiKey, categories, live } = await chrome.storage.local.get(["apiKey", "categories", "live"]);
 $("apiKey").value = apiKey ?? "";
 $("categories").value = (categories ?? []).join("\n");
+$("live").checked = Boolean(live);
+
+const saveSettings = () =>
+  chrome.storage.local.set({
+    apiKey: $("apiKey").value.trim(),
+    categories: [...new Set($("categories").value.split("\n").map((c) => c.trim()).filter(Boolean))],
+    live: $("live").checked,
+  });
+
+$("live").addEventListener("change", saveSettings);
+$("categories").addEventListener("change", saveSettings);
+$("apiKey").addEventListener("change", saveSettings);
 renderStatus((await chrome.storage.session.get("status")).status);
 
 chrome.storage.onChanged.addListener((changes, area) => {
@@ -20,8 +32,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
 });
 
 $("run").addEventListener("click", async () => {
-  const categories = [...new Set($("categories").value.split("\n").map((c) => c.trim()).filter(Boolean))];
-  await chrome.storage.local.set({ apiKey: $("apiKey").value.trim(), categories });
+  await saveSettings();
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.url?.startsWith(TLDRAW_ORIGIN)) {
     $("status").textContent = "tldraw.com のタブで実行してください";

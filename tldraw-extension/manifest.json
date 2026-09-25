@@ -6,5 +6,9 @@
   "permissions": ["scripting", "storage"],
   "host_permissions": ["https://api.typesafe.ai/*", "https://www.tldraw.com/*"],
   "background": { "service_worker": "src/background.js", "type": "module" },
+  "content_scripts": [
+    { "matches": ["https://www.tldraw.com/*"], "js": ["src/live-page.js"], "world": "MAIN" },
+    { "matches": ["https://www.tldraw.com/*"], "js": ["src/live-bridge.js"] }
+  ],
   "action": { "default_popup": "src/popup.html" }
 }
