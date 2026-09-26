@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Motion Remo</string>
+    <string name="widget_label">タップして動かす</string>
+    <string name="widget_description">タップしてから 3 秒以内にスマホを動かすと家電を操作します</string>
 </resources>

@@ -22,6 +22,9 @@ class MotionSegmenter(
     private var recordingStart: Long? = null
     private var lastMovingAt = 0L
 
+    /** True while a gesture has started and not yet ended. */
+    val isRecording: Boolean get() = recordingStart != null
+
     /** Feed one sample; returns the samples of a finished gesture, or null. */
     fun push(sample: MotionSample): List<MotionSample>? {
         val moving = isMoving(sample)

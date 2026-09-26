@@ -62,4 +62,13 @@ class SegmenterTest {
         )
         assertEquals(2, segments.size)
     }
+
+    @Test
+    fun reportsWhetherAGestureIsInProgress() {
+        val segmenter = MotionSegmenter()
+        segmenter.feed(still(0, 600) + shake(600, 300))
+        assertTrue(segmenter.isRecording)
+        segmenter.feed(shake(900, 300) + still(1200, 800))
+        assertTrue(!segmenter.isRecording)
+    }
 }

@@ -1,6 +1,7 @@
 package dev.mr04vv.motionremo
 
 import android.Manifest
+import android.content.pm.PackageManager
 import android.hardware.SensorManager
 import android.os.Bundle
 import android.util.Log
@@ -57,6 +58,7 @@ import kotlinx.coroutines.withContext
 import java.util.UUID
 
 private const val SAMPLES_PER_GESTURE = 3
+private const val NOTIFICATION_PERMISSION_REQUEST = 1
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,6 +66,10 @@ class MainActivity : ComponentActivity() {
         val recorder = MotionRecorder(getSystemService(SensorManager::class.java))
         val store = GestureStore(this)
         val settings = Settings(this)
+        // Results of widget and background gestures are shown as notifications.
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), NOTIFICATION_PERMISSION_REQUEST)
+        }
         setContent { MaterialTheme { App(recorder, store, settings) } }
     }
 }
