@@ -5,6 +5,8 @@ import UniformTypeIdentifiers
 
 struct SettingsView: View {
     static let windowID = "settings"
+    static let width: CGFloat = 460
+    static let minHeight: CGFloat = 600
 
     @ObservedObject var model: AppModel
     @State private var name = ""
@@ -71,7 +73,8 @@ struct SettingsView: View {
             Text(model.status).foregroundStyle(.secondary)
         }
         .formStyle(.grouped)
-        .frame(width: 460)
+        .frame(width: Self.width)
+        .frame(minHeight: Self.minHeight)
     }
 
     private var canRegister: Bool {

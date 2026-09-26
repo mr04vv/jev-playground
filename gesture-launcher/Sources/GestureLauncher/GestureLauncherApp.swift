@@ -5,10 +5,10 @@ struct GestureLauncherApp: App {
     @StateObject private var model = AppModel()
 
     var body: some Scene {
-        MenuBarExtra("RegisteredGesture Launcher", systemImage: "hand.draw") {
+        MenuBarExtra("Gesture Launcher", systemImage: "hand.draw") {
             MenuContent(model: model)
         }
-        Window("RegisteredGesture Launcher 設定", id: SettingsView.windowID) {
+        Window("Gesture Launcher 設定", id: SettingsView.windowID) {
             SettingsView(model: model)
         }
         .windowResizability(.contentSize)
@@ -29,9 +29,9 @@ struct MenuContent: View {
             Text("ジェスチャー未登録")
         }
         Divider()
-        Button("設定…") {
+        Button("設定・ジェスチャーを追加…") {
             openWindow(id: SettingsView.windowID)
-            NSApp.activate(ignoringOtherApps: true)
+            NSApp.activate()
         }
         Button("終了") { NSApp.terminate(nil) }
     }
