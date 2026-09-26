@@ -5,7 +5,7 @@ import Testing
 private let features = StrokeFeatures(points: [[0, 0], [1, 0]], directions: "6", corners: 0, aspect: 1)
 
 @Test func requestListsGestureIdsPlusUnknownAsChoices() throws {
-    let gestures = [Gesture(id: "g1", name: "円", action: .shortcut(name: "x"), samples: [features])]
+    let gestures = [RegisteredGesture(id: "g1", name: "円", action: .shortcut(name: "x"), samples: [features])]
     let data = try JSONEncoder().encode(JevRequest(input: features, gestures: gestures))
     let json = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
     #expect(json["model"] as? String == "jev-latest")
@@ -29,7 +29,7 @@ private let features = StrokeFeatures(points: [[0, 0], [1, 0]], directions: "6",
 }
 
 @Test func gestureRoundTripsThroughJson() throws {
-    let gesture = Gesture(id: "g1", name: "Slack", action: .app(bundleID: "com.tinyspeck.slackmacgap"), samples: [features])
-    let decoded = try JSONDecoder().decode(Gesture.self, from: JSONEncoder().encode(gesture))
+    let gesture = RegisteredGesture(id: "g1", name: "Slack", action: .app(bundleID: "com.tinyspeck.slackmacgap"), samples: [features])
+    let decoded = try JSONDecoder().decode(RegisteredGesture.self, from: JSONEncoder().encode(gesture))
     #expect(decoded == gesture)
 }

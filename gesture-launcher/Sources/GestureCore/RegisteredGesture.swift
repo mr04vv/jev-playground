@@ -3,7 +3,7 @@ public enum GestureAction: Codable, Equatable, Sendable {
     case shortcut(name: String)
 }
 
-public struct Gesture: Codable, Equatable, Identifiable, Sendable {
+public struct RegisteredGesture: Codable, Equatable, Identifiable, Sendable {
     public var id: String
     public var name: String
     public var action: GestureAction

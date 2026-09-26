@@ -32,7 +32,7 @@ public struct JevRequest: Encodable, Sendable {
     let state: State
     let questions: [String: Question]
 
-    public init(input: StrokeFeatures, gestures: [Gesture], model: String = "jev-latest") {
+    public init(input: StrokeFeatures, gestures: [RegisteredGesture], model: String = "jev-latest") {
         var criteria = Dictionary(uniqueKeysWithValues: gestures.map { ($0.id, $0.name) })
         criteria[Self.unknown] = Self.unknownDescription
         self.model = model
