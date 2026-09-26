@@ -71,20 +71,4 @@ class SegmenterTest {
         segmenter.feed(shake(900, 300) + still(1200, 800))
         assertTrue(!segmenter.isRecording)
     }
-
-    @Test
-    fun trimmingAHeldRecordingMatchesWhatTheSegmenterCutsOut() {
-        val stream = still(0, 600) + shake(600, 600) + still(1200, 800)
-        val segmented = MotionSegmenter().feed(stream).single()
-        // A hold-to-record capture of the same motion, with a shorter still lead-in.
-        val held = stream.filter { it.timeMs >= 300 }
-        val trimmed = trimToMotion(held)
-        assertEquals(segmented.first().timeMs, trimmed.first().timeMs)
-        assertEquals(segmented.last().timeMs, trimmed.last().timeMs)
-    }
-
-    @Test
-    fun trimmingLeavesNothingWhenThereIsNoMotion() {
-        assertTrue(trimToMotion(still(0, 800)).isEmpty())
-    }
 }

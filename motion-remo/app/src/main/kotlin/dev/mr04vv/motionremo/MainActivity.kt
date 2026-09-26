@@ -52,7 +52,6 @@ import dev.mr04vv.motionremo.core.RegisteredGesture
 import dev.mr04vv.motionremo.core.RemoAction
 import dev.mr04vv.motionremo.core.RemoAppliance
 import dev.mr04vv.motionremo.core.RemoClient
-import dev.mr04vv.motionremo.core.trimToMotion
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -138,7 +137,7 @@ private fun App(recorder: MotionRecorder, store: GestureStore, settings: Setting
                 gestures.remove(g)
                 persist()
             }) { samples ->
-                val features = MotionFeatures.from(trimToMotion(samples))
+                val features = MotionFeatures.from(samples)
                 if (features == null) status = "動きが短すぎるか長すぎます（0.2〜4 秒）" else recognize(features)
             }
             Screen.Settings -> SettingsScreen(settings) { status = "設定を保存しました" }
@@ -273,7 +272,7 @@ private fun ColumnScope.RegisterScreen(recorder: MotionRecorder, settings: Setti
     Spacer(Modifier.size(4.dp))
     Text("同じ動きを $SAMPLES_PER_GESTURE 回記録します（${samples.size}/$SAMPLES_PER_GESTURE）")
     HoldToRecord(recorder, "押しながら動かす") { recorded ->
-        val features = MotionFeatures.from(trimToMotion(recorded))
+        val features = MotionFeatures.from(recorded)
         if (features == null) {
             message = "動きが短すぎるか長すぎます（0.2〜4 秒）"
             return@HoldToRecord
