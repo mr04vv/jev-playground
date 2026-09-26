@@ -1,10 +1,13 @@
 package dev.mr04vv.motionremo
 
+import android.Manifest
 import android.hardware.SensorManager
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -25,7 +28,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,9 +43,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import dev.mr04vv.motionremo.core.JevClient
 import dev.mr04vv.motionremo.core.MotionFeatures
 import dev.mr04vv.motionremo.core.RegisteredGesture
 import dev.mr04vv.motionremo.core.RemoAction
@@ -51,9 +56,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
-private const val TAG = "MotionRemo"
 private const val SAMPLES_PER_GESTURE = 3
-private const val CONFIDENCE_THRESHOLD = 0.6
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,7 +73,9 @@ private enum class Screen { Main, Settings, Register }
 /** A light button or aircon power choice offered for registration. */
 private data class ActionOption(val label: String, val action: RemoAction)
 
-private fun optionsFor(appliances: List<RemoAppliance>): List<ActionOption> = appliances.flatMap { a ->
+private val ignoreOption = ActionOption("何もしない（持ち上げる・置くなどの誤作動よけ）", RemoAction.Ignore)
+
+private fun optionsFor(appliances: List<RemoAppliance>): List<ActionOption> = listOf(ignoreOption) + appliances.flatMap { a ->
     val name = a.nickname.ifEmpty { a.id }
     when (a.type) {
         RemoClient.TYPE_LIGHT -> a.light?.buttons.orEmpty().map { b ->
@@ -82,11 +87,6 @@ private fun optionsFor(appliances: List<RemoAppliance>): List<ActionOption> = ap
         )
         else -> emptyList()
     }
-}
-
-private fun describe(action: RemoAction): String = when (action) {
-    is RemoAction.Light -> "${action.applianceName}: ${action.button}"
-    is RemoAction.Aircon -> "${action.applianceName}: ${if (action.on) "電源ON" else "電源OFF"}"
 }
 
 @Composable
@@ -105,32 +105,11 @@ private fun App(recorder: MotionRecorder, store: GestureStore, settings: Setting
         status = "保存に失敗しました: ${it.message}"
     }
 
+    val recognizer = remember { Recognizer(store, settings) }
+
     fun recognize(features: MotionFeatures) {
-        if (gestures.isEmpty()) {
-            status = "ジェスチャーが未登録です"
-            return
-        }
         status = "判定中…"
-        val candidates = gestures.toList()
-        scope.launch {
-            try {
-                val started = System.currentTimeMillis()
-                val response = withContext(Dispatchers.IO) { JevClient(settings.jevKey).recognize(features, candidates) }
-                val judged = System.currentTimeMillis() - started
-                val confidence = response.answer?.confidence?.let { "%.2f".format(it) } ?: "-"
-                val gesture = response.decision(CONFIDENCE_THRESHOLD)?.let { id -> candidates.firstOrNull { it.id == id } }
-                if (gesture == null) {
-                    status = "該当なし（確信度 $confidence、判定 ${judged}ms）"
-                    return@launch
-                }
-                withContext(Dispatchers.IO) { RemoClient(settings.remoToken).send(gesture.action) }
-                val total = System.currentTimeMillis() - started
-                status = "「${gesture.name}」→ ${describe(gesture.action)}（確信度 $confidence、判定 ${judged}ms、合計 ${total}ms）"
-            } catch (e: Exception) {
-                Log.e(TAG, "recognition or remo call failed", e)
-                status = "失敗しました: ${e.message}"
-            }
-        }
+        scope.launch { status = recognizer.run(features) }
     }
 
     Column(
@@ -215,6 +194,26 @@ private fun MainScreen(
 
 @Composable
 private fun SettingsScreen(settings: Settings, onSaved: () -> Unit) {
+    val context = LocalContext.current
+    var background by remember { mutableStateOf(settings.backgroundListening) }
+    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (!granted) Log.w(TAG, "notification permission denied; the listening notification will be hidden")
+        settings.backgroundListening = true
+        background = true
+        GestureService.start(context)
+    }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text("バックグラウンド待機（画面オンの間、動かすだけで操作）", Modifier.weight(1f))
+        Switch(checked = background, onCheckedChange = { on ->
+            if (on) {
+                notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                settings.backgroundListening = false
+                background = false
+                GestureService.stop(context)
+            }
+        })
+    }
     var jevKey by remember { mutableStateOf(settings.jevKey) }
     var remoToken by remember { mutableStateOf(settings.remoToken) }
     OutlinedTextField(jevKey, { jevKey = it }, Modifier.fillMaxWidth(), label = { Text("TypeSafe API キー") },
@@ -232,7 +231,7 @@ private fun SettingsScreen(settings: Settings, onSaved: () -> Unit) {
 @Composable
 private fun ColumnScope.RegisterScreen(recorder: MotionRecorder, settings: Settings, onRegistered: (RegisteredGesture) -> Unit) {
     val scope = rememberCoroutineScope()
-    var options by remember { mutableStateOf<List<ActionOption>>(emptyList()) }
+    var options by remember { mutableStateOf(listOf(ignoreOption)) }
     var selected by remember { mutableStateOf<ActionOption?>(null) }
     var name by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("家電を読み込んでください") }
@@ -245,7 +244,7 @@ private fun ColumnScope.RegisterScreen(recorder: MotionRecorder, settings: Setti
             try {
                 val appliances = withContext(Dispatchers.IO) { RemoClient(settings.remoToken).appliances() }
                 options = optionsFor(appliances)
-                message = if (options.isEmpty()) "照明・エアコンが見つかりません" else "操作を選んでください"
+                message = if (options.size == 1) "照明・エアコンが見つかりません" else "操作を選んでください"
             } catch (e: Exception) {
                 Log.e(TAG, "failed to load appliances", e)
                 message = "読み込みに失敗しました: ${e.message}"

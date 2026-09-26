@@ -28,8 +28,13 @@ class Settings(context: Context) {
         get() = prefs.getString(KEY_REMO, "").orEmpty()
         set(value) = prefs.edit().putString(KEY_REMO, value).apply()
 
+    var backgroundListening: Boolean
+        get() = prefs.getBoolean(KEY_BACKGROUND, false)
+        set(value) = prefs.edit().putBoolean(KEY_BACKGROUND, value).apply()
+
     private companion object {
         const val KEY_JEV = "jev_api_key"
         const val KEY_REMO = "remo_token"
+        const val KEY_BACKGROUND = "background_listening"
     }
 }
