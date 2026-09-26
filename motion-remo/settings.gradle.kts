@@ -14,4 +14,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "motion-remo"
-include(":core")
+include(":core", ":app")

@@ -22,3 +22,14 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 }
+
+// Accuracy check against the real Jev API: TYPESAFE_API_KEY=... ./gradlew :core:smoke
+val smoke: SourceSet by sourceSets.creating {
+    compileClasspath += sourceSets.main.get().output + configurations.runtimeClasspath.get()
+    runtimeClasspath += output + compileClasspath
+}
+
+tasks.register<JavaExec>("smoke") {
+    classpath = smoke.runtimeClasspath
+    mainClass.set("dev.mr04vv.motionremo.core.SmokeKt")
+}
