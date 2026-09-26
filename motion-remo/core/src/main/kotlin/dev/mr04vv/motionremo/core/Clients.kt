@@ -61,7 +61,7 @@ class RemoClient(private val token: String) {
         json.decodeFromString(ListSerializer(RemoAppliance.serializer()), request("$BASE_URL/1/appliances", "GET", token, null, null, null))
 
     fun send(action: RemoAction) {
-        val call = action.toRequest()
+        val call = action.toRequest() ?: return
         request("$BASE_URL${call.path}", "POST", token, "application/x-www-form-urlencoded", formEncode(call.form), null)
     }
 

@@ -15,6 +15,14 @@ sealed interface RemoAction {
     @Serializable
     @SerialName("aircon")
     data class Aircon(override val applianceId: String, override val applianceName: String, val on: Boolean) : RemoAction
+
+    /** Registered for motions like picking the phone up, so they match something harmless instead of a real action. */
+    @Serializable
+    @SerialName("ignore")
+    data object Ignore : RemoAction {
+        override val applianceId: String get() = ""
+        override val applianceName: String get() = ""
+    }
 }
 
 @Serializable
